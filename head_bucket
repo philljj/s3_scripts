@@ -1,0 +1,79 @@
+#!/bin/bash
+
+# attribution
+#   Written using this great (but slightly outdated) guide:
+#   https://czak.pl/2015/09/15/s3-rest-api-with-curl.html
+
+# functions
+function get_hmac_sha256 {
+  if [ $# -le 1 ]; then
+    echo "error: get_hmac_sha256 needs args" 
+    echo "usage:"
+    echo "  get_hmac_sha256 key:<key> <data>"
+    exit 1
+  fi
+
+  key="$1"
+  data="$2"
+
+  echo -n "$data" |  openssl dgst -sha256 -mac HMAC -macopt "$key" | awk '{print $2}'
+}
+
+# s3 account info
+access_key=""
+secret_key=""
+bucket=""
+endpoint=""
+region=""
+service="s3"
+
+# date, timestamp, hashes, etc.
+date_ymd=`date +%Y%m%d`
+ts=`date -u +%Y%m%d'T'%H%M%S'Z'`
+empty_hash=`openssl dgst -sha256 /dev/null | awk '{print $2}'`
+http_req="HEAD"
+
+# build canonical request
+cr_str="$http_req
+/$bucket
+
+host:s3-external-1.amazonaws.com
+x-amz-content-sha256:e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855
+x-amz-date:$ts
+
+host;x-amz-content-sha256;x-amz-date
+e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+
+#echo "cr:
+#$cr_str"
+
+cr_hash=`echo -n "$cr_str" | openssl dgst -sha256 | awk '{print $2}'`
+
+# build string to sign
+sts="AWS4-HMAC-SHA256
+$ts
+$date_ymd/$region/$service/aws4_request
+$cr_hash"
+
+#echo "sts:
+#$sts"
+
+# signing key from date keys
+d_key=$(get_hmac_sha256 key:"AWS4$secret_key" $date_ymd)
+dr_key=$(get_hmac_sha256 hexkey:$d_key $region)
+drs_key=$(get_hmac_sha256 hexkey:$dr_key $service)
+signing_key=$(get_hmac_sha256 hexkey:$drs_key "aws4_request")
+req_signature=$(get_hmac_sha256 hexkey:$signing_key "$sts")
+
+auth_hdr="Authorization: AWS4-HMAC-SHA256 Credential=$access_key/$date_ymd/$region/s3/aws4_request, \
+          SignedHeaders=host;x-amz-content-sha256;x-amz-date, \
+          Signature=$req_signature" 
+
+echo $auth_hdr
+curl \
+  -I \
+  -H "$auth_hdr" \
+  -H "x-amz-content-sha256: $empty_hash" \
+  -H "x-amz-date: $ts" \
+  -H "Content-Length: 0" \
+  "https://s3-external-1.amazonaws.com/$bucket"
