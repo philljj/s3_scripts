@@ -38,14 +38,11 @@ cr_str="$http_req
 /$bucket
 
 host:s3-external-1.amazonaws.com
-x-amz-content-sha256:e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855
+x-amz-content-sha256:$empty_hash
 x-amz-date:$ts
 
 host;x-amz-content-sha256;x-amz-date
-e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
-
-#echo "cr:
-#$cr_str"
+$empty_hash"
 
 cr_hash=`echo -n "$cr_str" | openssl dgst -sha256 | awk '{print $2}'`
 
@@ -54,9 +51,6 @@ sts="AWS4-HMAC-SHA256
 $ts
 $date_ymd/$region/$service/aws4_request
 $cr_hash"
-
-#echo "sts:
-#$sts"
 
 # signing key from date keys
 d_key=$(get_hmac_sha256 key:"AWS4$secret_key" $date_ymd)
