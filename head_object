@@ -25,6 +25,8 @@ endpoint="s3-external-1.amazonaws.com"
 region="us-east-1"
 service="s3"
 
+object=""
+
 access_key=""
 secret_key=""
 
@@ -36,9 +38,9 @@ http_req="HEAD"
 
 # build canonical request
 cr_str="$http_req
-/$bucket
+/$object
 
-host:$endpoint
+host:$bucket.$endpoint
 x-amz-content-sha256:$empty_hash
 x-amz-date:$ts
 
@@ -71,4 +73,4 @@ curl \
   -H "x-amz-content-sha256: $empty_hash" \
   -H "x-amz-date: $ts" \
   -H "Content-Length: 0" \
-  "https://$endpoint/$bucket"
+  "https://$bucket.$endpoint/$object"

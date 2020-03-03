@@ -25,6 +25,14 @@ endpoint="s3-external-1.amazonaws.com"
 region="us-east-1"
 service="s3"
 
+object=""
+
+# Either of these range formats should be supported by S3 backend:
+#  https://docs.aws.amazon.com/AmazonS3/latest/API/API_GetObject.html
+#  https://www.w3.org/Protocols/rfc2616/rfc2616-sec14.html#sec14.35
+#range="bytes=0-64"
+range="bytes=-512"
+
 access_key=""
 secret_key=""
 
@@ -32,17 +40,18 @@ secret_key=""
 date_ymd=`date +%Y%m%d`
 ts=`date -u +%Y%m%d'T'%H%M%S'Z'`
 empty_hash=`openssl dgst -sha256 /dev/null | awk '{print $2}'`
-http_req="HEAD"
+http_req="GET"
 
 # build canonical request
 cr_str="$http_req
-/$bucket
+/$object
 
-host:$endpoint
+host:$bucket.$endpoint
+range:$range
 x-amz-content-sha256:$empty_hash
 x-amz-date:$ts
 
-host;x-amz-content-sha256;x-amz-date
+host;range;x-amz-content-sha256;x-amz-date
 $empty_hash"
 
 cr_hash=`echo -n "$cr_str" | openssl dgst -sha256 | awk '{print $2}'`
@@ -61,14 +70,14 @@ signing_key=$(get_hmac_sha256 hexkey:$drs_key "aws4_request")
 req_signature=$(get_hmac_sha256 hexkey:$signing_key "$sts")
 
 auth_hdr="Authorization: AWS4-HMAC-SHA256 Credential=$access_key/$date_ymd/$region/s3/aws4_request, \
-          SignedHeaders=host;x-amz-content-sha256;x-amz-date, \
+          SignedHeaders=host;range;x-amz-content-sha256;x-amz-date, \
           Signature=$req_signature" 
 
 curl \
+  "$http_req" \
   -v \
-  -I \
   -H "$auth_hdr" \
+  -H "range:$range" \
   -H "x-amz-content-sha256: $empty_hash" \
   -H "x-amz-date: $ts" \
-  -H "Content-Length: 0" \
-  "https://$endpoint/$bucket"
+  "https://$bucket.$endpoint/$object"
