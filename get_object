@@ -74,7 +74,6 @@ auth_hdr="Authorization: AWS4-HMAC-SHA256 Credential=$access_key/$date_ymd/$regi
           Signature=$req_signature" 
 
 curl \
-  "$http_req" \
   -v \
   -H "$auth_hdr" \
   -H "range:$range" \
