@@ -7,7 +7,7 @@
 # functions
 function get_hmac_sha256 {
   if [ $# -le 1 ]; then
-    echo "error: get_hmac_sha256 needs args" 
+    echo "error: get_hmac_sha256 needs args"
     echo "usage:"
     echo "  get_hmac_sha256 key:<key> <data>"
     exit 1
@@ -62,7 +62,7 @@ req_signature=$(get_hmac_sha256 hexkey:$signing_key "$sts")
 
 auth_hdr="Authorization: AWS4-HMAC-SHA256 Credential=$access_key/$date_ymd/$region/s3/aws4_request, \
           SignedHeaders=host;x-amz-content-sha256;x-amz-date, \
-          Signature=$req_signature" 
+          Signature=$req_signature"
 
 curl \
   -v \
