@@ -7,7 +7,7 @@
 # functions
 function get_hmac_sha256 {
   if [ $# -le 1 ]; then
-    echo "error: get_hmac_sha256 needs args" 
+    echo "error: get_hmac_sha256 needs args"
     echo "usage:"
     echo "  get_hmac_sha256 key:<key> <data>"
     exit 1
@@ -21,8 +21,7 @@ function get_hmac_sha256 {
 
 # s3 account info
 bucket=""
-endpoint="s3-accelerate.amazonaws.com"
-bucket_endpoint="$bucket.$endpoint"
+endpoint="s3-external-1.amazonaws.com"
 region="us-east-1"
 service="s3"
 
@@ -37,9 +36,9 @@ http_req="HEAD"
 
 # build canonical request
 cr_str="$http_req
-/
+/$bucket
 
-host:$bucket_endpoint
+host:$endpoint
 x-amz-content-sha256:$empty_hash
 x-amz-date:$ts
 
@@ -63,7 +62,7 @@ req_signature=$(get_hmac_sha256 hexkey:$signing_key "$sts")
 
 auth_hdr="Authorization: AWS4-HMAC-SHA256 Credential=$access_key/$date_ymd/$region/s3/aws4_request, \
           SignedHeaders=host;x-amz-content-sha256;x-amz-date, \
-          Signature=$req_signature" 
+          Signature=$req_signature"
 
 curl \
   -v \
@@ -72,4 +71,4 @@ curl \
   -H "x-amz-content-sha256: $empty_hash" \
   -H "x-amz-date: $ts" \
   -H "Content-Length: 0" \
-  "https://$bucket_endpoint"
+  "https://$endpoint/$bucket"
